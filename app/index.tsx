@@ -9,6 +9,7 @@ import {
 import SecureInput from "../components/SecureInput";
 import { useAuth } from "../context/AuthContext";
 import { authService } from "../services/business/authService";
+import { hapticsService } from "../services/business/hapticsService";
 
 /**
  * PRESENTATION LAYER
@@ -36,9 +37,24 @@ export default function LoginScreen() {
     );
   }
 
+  const handlePinChange = (val: string) => {
+    if (val.length > pin.length) {
+      hapticsService.trigger("light");
+    }
+    setPin(val);
+  };
+
+  const handleConfirmPinChange = (val: string) => {
+    if (val.length > confirmPin.length) {
+      hapticsService.trigger("light");
+    }
+    setConfirmPin(val);
+  };
+
   const handleSetupPin = async () => {
     setError(undefined);
     if (pin !== confirmPin) {
+      hapticsService.trigger("error");
       setError("PINs do not match.");
       return;
     }
@@ -46,9 +62,11 @@ export default function LoginScreen() {
     const result = await authService.setPin(pin);
     setBusy(false);
     if (!result.success) {
+      hapticsService.trigger("error");
       setError(result.message);
       return;
     }
+    hapticsService.trigger("success");
     setPinAlreadySet(true);
     setPin("");
     setConfirmPin("");
@@ -60,8 +78,11 @@ export default function LoginScreen() {
     const result = await login(pin);
     setBusy(false);
     if (!result.success) {
+      hapticsService.trigger("error");
       setError(result.message);
       setPin("");
+    } else {
+      hapticsService.trigger("success");
     }
   };
 
@@ -76,7 +97,7 @@ export default function LoginScreen() {
 
       <SecureInput
         value={pin}
-        onChangeValue={setPin}
+        onChangeValue={handlePinChange}
         placeholder="PIN"
         errorMessage={error}
       />
@@ -85,7 +106,7 @@ export default function LoginScreen() {
         <View style={{ marginTop: 12 }}>
           <SecureInput
             value={confirmPin}
-            onChangeValue={setConfirmPin}
+            onChangeValue={handleConfirmPinChange}
             placeholder="Confirm PIN"
           />
         </View>

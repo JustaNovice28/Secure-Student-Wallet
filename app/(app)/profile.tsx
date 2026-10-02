@@ -1,8 +1,9 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,11 +16,20 @@ import { StudentProfile } from "../../types";
 
 const EMPTY: StudentProfile = { name: "", course: "", year: "", studentId: "" };
 
+const YEAR_OPTIONS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+  "5th Year",
+];
+
 export default function ProfileScreen() {
   const [form, setForm] = useState<StudentProfile>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const [scanning, setScanning] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [yearPickerVisible, setYearPickerVisible] = useState(false);
 
   useEffect(() => {
     profileService.getProfile().then((p) => p && setForm(p));
@@ -70,28 +80,8 @@ export default function ProfileScreen() {
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     setScanning(false);
-    update("studentId", data);
-  };
-
-  const tagLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Location permission needed",
-        "Enable location to tag where this info was verified.",
-      );
-      return;
-    }
-    const position = await Location.getCurrentPositionAsync({});
-    update("lastVerifiedLocation", {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      timestamp: Date.now(),
-    });
-    Alert.alert(
-      "Location tagged",
-      "Verification location saved with your profile.",
-    );
+    const cleaned = data.replace(/[^0-9]/g, "").slice(0, 10);
+    update("studentId", cleaned);
   };
 
   if (scanning) {
@@ -132,46 +122,100 @@ export default function ProfileScreen() {
 
       <Field
         label="Full name"
+        placeholder="Enter name (no numbers)"
         value={form.name}
-        onChangeText={(v) => update("name", v)}
+        onChangeText={(v) => {
+          const noNumbers = v.replace(/[0-9]/g, "");
+          update("name", noNumbers);
+        }}
       />
+
       <Field
         label="Course"
+        placeholder="e.g. BSIT"
         value={form.course}
         onChangeText={(v) => update("course", v)}
       />
-      <Field
-        label="Year level"
-        value={form.year}
-        onChangeText={(v) => update("year", v)}
-      />
+
+      <View style={{ marginBottom: 14 }}>
+        <Text style={styles.label}>Year level</Text>
+        <TouchableOpacity
+          style={styles.dropdownTrigger}
+          onPress={() => setYearPickerVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.dropdownValue,
+              !form.year ? styles.dropdownPlaceholder : null,
+            ]}
+          >
+            {form.year || "Select year level"}
+          </Text>
+          <Ionicons name="chevron-down" size={18} color="#64748b" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={yearPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setYearPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setYearPickerVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Year Level</Text>
+            {YEAR_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.modalOption,
+                  form.year === option && styles.modalOptionSelected,
+                ]}
+                onPress={() => {
+                  update("year", option);
+                  setYearPickerVisible(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    form.year === option && styles.modalOptionTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+                {form.year === option ? (
+                  <Ionicons name="checkmark" size={20} color="#2563eb" />
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.idRow}>
         <View style={{ flex: 1 }}>
           <Field
-            label="Student ID"
+            label="Student ID (10 digits only)"
+            placeholder="e.g. 2024104928"
+            keyboardType="number-pad"
+            maxLength={10}
             value={form.studentId}
-            onChangeText={(v) => update("studentId", v)}
+            onChangeText={(v) => {
+              const digitsOnly = v.replace(/[^0-9]/g, "").slice(0, 10);
+              update("studentId", digitsOnly);
+            }}
           />
         </View>
         <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
           <Text style={styles.scanBtnText}>Scan QR</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.secondaryBtn} onPress={tagLocation}>
-        <Text style={styles.secondaryBtnText}>
-          {form.lastVerifiedLocation
-            ? "Re-verify location"
-            : "Tag verification location (GPS)"}
-        </Text>
-      </TouchableOpacity>
-      {form.lastVerifiedLocation && (
-        <Text style={styles.locationNote}>
-          Last verified at {form.lastVerifiedLocation.latitude.toFixed(4)},{" "}
-          {form.lastVerifiedLocation.longitude.toFixed(4)}
-        </Text>
-      )}
 
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
         <Text style={styles.saveBtnText}>Save</Text>
@@ -186,10 +230,16 @@ export default function ProfileScreen() {
 function Field({
   label,
   value,
+  placeholder,
+  keyboardType = "default",
+  maxLength,
   onChangeText,
 }: {
   label: string;
   value: string;
+  placeholder?: string;
+  keyboardType?: "default" | "number-pad";
+  maxLength?: number;
   onChangeText: (v: string) => void;
 }) {
   return (
@@ -198,6 +248,10 @@ function Field({
       <TextInput
         style={styles.input}
         value={value}
+        placeholder={placeholder}
+        placeholderTextColor="#94a3b8"
+        keyboardType={keyboardType}
+        maxLength={maxLength}
         onChangeText={onChangeText}
       />
     </View>
@@ -220,6 +274,71 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: "#fff",
+    color: "#1e293b",
+    fontSize: 15,
+  },
+  dropdownTrigger: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dropdownValue: {
+    fontSize: 15,
+    color: "#1e293b",
+  },
+  dropdownPlaceholder: {
+    color: "#94a3b8",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 360,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 14,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
+  },
+  modalOptionSelected: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: "#334155",
+  },
+  modalOptionTextSelected: {
+    color: "#2563eb",
+    fontWeight: "700",
   },
   idRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   scanBtn: {
@@ -239,23 +358,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   cancelScanText: { fontWeight: "700" },
-  secondaryBtn: {
-    backgroundColor: "#e0f2fe",
-    borderRadius: 10,
-    paddingVertical: 12,
-    marginTop: 4,
-  },
-  secondaryBtnText: {
-    textAlign: "center",
-    color: "#0369a1",
-    fontWeight: "600",
-  },
-  locationNote: {
-    fontSize: 12,
-    color: "#64748b",
-    marginTop: 6,
-    textAlign: "center",
-  },
   saveBtn: {
     backgroundColor: "#2563eb",
     borderRadius: 10,

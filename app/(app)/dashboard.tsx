@@ -5,15 +5,17 @@ import ProfileCard from "../../components/ProfileCard";
 import UserHeader from "../../components/UserHeader";
 import { useAuth } from "../../context/AuthContext";
 import { profileService } from "../../services/business/profileService";
-import { StudentProfile } from "../../types";
+import { AppPreferences, StudentProfile } from "../../types";
 
 export default function DashboardScreen() {
   const { logout } = useAuth();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [prefs, setPrefs] = useState<AppPreferences | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       profileService.getProfile().then(setProfile);
+      profileService.getPreferences().then(setPrefs);
     }, []),
   );
 
@@ -35,6 +37,7 @@ export default function DashboardScreen() {
           year={profile.year}
           studentId={profile.studentId}
           avatarUri={profile.avatarUri}
+          maskId={prefs?.maskStudentId}
         />
       ) : (
         <View style={styles.emptyCard}>

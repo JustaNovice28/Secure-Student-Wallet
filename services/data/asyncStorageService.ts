@@ -27,8 +27,9 @@ const KEYS = {
 } as const;
 
 const DEFAULT_PREFERENCES: AppPreferences = {
-  darkMode: false,
-  notificationsEnabled: true,
+  maskStudentId: true,
+  hapticFeedback: true,
+  shakeToLock: false,
   language: "en",
 };
 

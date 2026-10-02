@@ -23,6 +23,17 @@ export interface ProfileCardProps {
   year: string;
   studentId: string;
   avatarUri?: string;
+  maskId?: boolean;
+}
+
+function formatStudentId(id: string, mask?: boolean): string {
+  if (!mask || !id) return id;
+  const parts = id.split("-");
+  if (parts.length > 1) {
+    return `${parts[0]}-${"•".repeat(parts.slice(1).join("-").length || 4)}`;
+  }
+  if (id.length <= 4) return "••••";
+  return id.slice(0, 4) + "•".repeat(id.length - 4);
 }
 
 export default function ProfileCard({
@@ -31,6 +42,7 @@ export default function ProfileCard({
   year,
   studentId,
   avatarUri,
+  maskId,
 }: ProfileCardProps) {
   return (
     <View style={styles.card}>
@@ -46,7 +58,7 @@ export default function ProfileCard({
         <Text style={styles.meta}>
           {course} • {year}
         </Text>
-        <Text style={styles.id}>ID: {studentId}</Text>
+        <Text style={styles.id}>ID: {formatStudentId(studentId, maskId)}</Text>
       </View>
     </View>
   );

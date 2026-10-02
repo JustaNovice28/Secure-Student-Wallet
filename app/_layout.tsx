@@ -17,7 +17,7 @@ function RouteGuard() {
     } else if (isAuthenticated && !inAppGroup) {
       router.replace("/dashboard");
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, router]);
 
   return <Slot />;
 }

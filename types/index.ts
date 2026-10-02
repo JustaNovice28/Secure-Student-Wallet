@@ -12,17 +12,13 @@ export interface StudentProfile {
   year: string;
   studentId: string;
   avatarUri?: string;
-  lastVerifiedLocation?: {
-    latitude: number;
-    longitude: number;
-    timestamp: number;
-  };
 }
 
 // Non-sensitive app preferences -> AsyncStorage
 export interface AppPreferences {
-  darkMode: boolean;
-  notificationsEnabled: boolean;
+  maskStudentId: boolean;
+  hapticFeedback: boolean;
+  shakeToLock: boolean;
   language: "en" | "fil";
 }
 

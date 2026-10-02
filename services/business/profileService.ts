@@ -15,10 +15,42 @@ export const profileService = {
     errors: string[];
   } {
     const errors: string[] = [];
-    if (!profile.name.trim()) errors.push("Name is required.");
-    if (!profile.studentId.trim()) errors.push("Student ID is required.");
-    if (!profile.course.trim()) errors.push("Course is required.");
-    if (!profile.year.trim()) errors.push("Year level is required.");
+
+    // Name: letters, spaces, hyphens, apostrophes only — no numbers
+    if (!profile.name.trim()) {
+      errors.push("Name is required.");
+    } else if (/\d/.test(profile.name)) {
+      errors.push("Name cannot contain numbers.");
+    } else if (!/^[A-Za-z\s.\-']+$/.test(profile.name.trim())) {
+      errors.push("Name can only contain letters, spaces, and hyphens.");
+    }
+
+    // Student ID: exactly 10 digits, only integers
+    if (!profile.studentId.trim()) {
+      errors.push("Student ID is required.");
+    } else if (!/^\d{10}$/.test(profile.studentId.trim())) {
+      errors.push("Student ID must be exactly 10 digits (numbers only).");
+    }
+
+    // Course
+    if (!profile.course.trim()) {
+      errors.push("Course is required.");
+    }
+
+    // Year level: dropdown from 1st Year to 5th Year
+    const VALID_YEARS = [
+      "1st Year",
+      "2nd Year",
+      "3rd Year",
+      "4th Year",
+      "5th Year",
+    ];
+    if (!profile.year.trim()) {
+      errors.push("Year level is required.");
+    } else if (!VALID_YEARS.includes(profile.year)) {
+      errors.push("Year level must be from 1st Year to 5th Year.");
+    }
+
     return { valid: errors.length === 0, errors };
   },
 

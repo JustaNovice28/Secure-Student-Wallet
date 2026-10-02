@@ -1,42 +1,21 @@
 import { useRouter } from "expo-router";
-import { Accelerometer } from "expo-sensors";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text } from "react-native";
 import SettingItem from "../../components/SettingItem";
 import { useAuth } from "../../context/AuthContext";
 import { authService } from "../../services/business/authService";
+import { hapticsService } from "../../services/business/hapticsService";
 import { profileService } from "../../services/business/profileService";
 import { AppPreferences } from "../../types";
-
-const SHAKE_THRESHOLD = 1.8;
 
 export default function PreferencesScreen() {
   const router = useRouter();
   const { logout } = useAuth();
   const [prefs, setPrefs] = useState<AppPreferences | null>(null);
-  const [shakeToLock, setShakeToLock] = useState(false);
-  const lastShake = useRef(0);
 
   useEffect(() => {
     profileService.getPreferences().then(setPrefs);
   }, []);
-
-  // SENSORS: accelerometer-based "shake to lock" — an optional
-  // convenience feature layered on top of the required PIN lock.
-  useEffect(() => {
-    if (!shakeToLock) return;
-
-    Accelerometer.setUpdateInterval(200);
-    const sub = Accelerometer.addListener(({ x, y, z }) => {
-      const magnitude = Math.sqrt(x * x + y * y + z * z);
-      const now = Date.now();
-      if (magnitude > SHAKE_THRESHOLD && now - lastShake.current > 1500) {
-        lastShake.current = now;
-        logout();
-      }
-    });
-    return () => sub.remove();
-  }, [shakeToLock]);
 
   if (!prefs) return null;
 
@@ -74,22 +53,28 @@ export default function PreferencesScreen() {
 
       <Text style={styles.sectionLabel}>General (stored in AsyncStorage)</Text>
       <SettingItem
-        label="Dark mode"
-        description="Non-sensitive display preference"
-        value={prefs.darkMode}
-        onToggle={(v) => toggle("darkMode", v)}
+        label="Mask Student ID"
+        description="Conceals ID on dashboard cards to prevent shoulder-surfing"
+        value={prefs.maskStudentId}
+        onToggle={(v) => toggle("maskStudentId", v)}
       />
       <SettingItem
-        label="Notifications"
-        description="Non sensitive app setting"
-        value={prefs.notificationsEnabled}
-        onToggle={(v) => toggle("notificationsEnabled", v)}
+        label="Haptic Feedback"
+        description="Tactile vibration on PIN taps, buttons, and security actions"
+        value={prefs.hapticFeedback}
+        onToggle={async (v) => {
+          await toggle("hapticFeedback", v);
+          if (v) hapticsService.trigger("light");
+        }}
       />
       <SettingItem
         label="Shake to lock"
         description="Uses the accelerometer to log you out on a shake"
-        value={shakeToLock}
-        onToggle={setShakeToLock}
+        value={prefs.shakeToLock}
+        onToggle={async (v) => {
+          await toggle("shakeToLock", v);
+          if (v) hapticsService.trigger("light");
+        }}
       />
 
       <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
