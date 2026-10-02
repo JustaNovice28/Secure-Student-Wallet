@@ -81,7 +81,7 @@ export default function PreferencesScreen() {
       />
       <SettingItem
         label="Notifications"
-        description="Non-sensitive app setting"
+        description="Non sensitive app setting"
         value={prefs.notificationsEnabled}
         onToggle={(v) => toggle("notificationsEnabled", v)}
       />
